@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -74,4 +75,28 @@ func (ws *Websocket) write(data []byte) error {
 		return err
 	}
 	return ws.buffReadWriter.Flush()
+}
+
+func (ws *Websocket) read(size int) ([]byte, error) {
+	data := make([]byte, 0)
+	for {
+		if len(data) == size {
+			break
+		}
+		// Temporary slice to read chunk
+		sz := bufferSize
+		remaining := size - len(data)
+		if sz > remaining {
+			sz = remaining
+		}
+		temp := make([]byte, sz)
+
+		n, err := ws.buffReadWriter.Read(temp)
+		if err != nil && err != io.EOF {
+			return data, err
+		}
+
+		data = append(data, temp[:n]...)
+	}
+	return data, nil
 }
